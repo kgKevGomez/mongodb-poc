@@ -1,58 +1,44 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Conventions;
+using MongoDB.Driver;
 
-namespace raven_poc
+namespace mongodb_poc
 {
     class Program
     {
         static void Main(string[] args)
         {
-            using (IDocumentStore store = new DocumentStore
-            {
-                Urls = new[]                        // URL to the Server,
-                {                                   // or list of URLs 
-                    "http://localhost:8080"  // to all Cluster Servers (Nodes)
-                },
-                Database = "poc",             // Default database that DocumentStore will interact with
-                Conventions = {  }                   // DocumentStore customizations
-            })
-            {
-                store.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new NameJsonConverter());
-                
-                store.Initialize();                 // Each DocumentStore needs to be initialized before use.
-                                                    // This process establishes the connection with the Server
-                                                    // and downloads various configurations
-                                                    // e.g. cluster topology or client configuration
+            //Allows for honest type serialization 
+            BsonSerializer.RegisterSerializer<Name>(new NameSerializer());
 
-                using (IDocumentSession session = store.OpenSession())  // Open a session for a default 'Database'
-                {
-                    // var category = new Category((Name)"Database Category");
+            var pack = new ConventionPack();
+            pack.Add(new MongoMappingConvention()); //Allows for protected constructor and sets Id generation
+            ConventionRegistry.Register("Custom convention", pack, _ => true);
 
-                    // session.Store(category);                            // Assign an 'Id' and collection (Categories)
-                    //                                                    // and start tracking an entity
+            var database = CreateMongoDbClient();
+            var collection = database.GetCollection<Category>("bar");
 
-                    // session.SaveChanges();                              // Send to the Server
-                    //                                                     // one request processed in one transaction
+            var document = new Category(new Name("test categ"));
+            document.ChangeName((Name)"new name 2222");
+            document.AddTag("test");
 
-                    var loaded = session.Load<Category>("categories/1-A");
-                    loaded.ChangeName((Name)"new name 2222");
-                    loaded.AddTag("test");
+            collection.InsertOne(document);
 
-                    session.SaveChanges();
+            //Proves that we can filter based on honest types
+            var filter = Builders<Category>.Filter.Regex(c => c.Name, new BsonRegularExpression(".*name.*"));
+            var result = collection.Find(filter).ToList();
 
-                    //TODO: fix honest types loading
-                    string[] names = session
-                        .Query<Category>()                               // Query for Products
-                        .Where(x => x.Tags.Any(t => t == "test"))                 // Filter
-                        .Skip(0).Take(10)                               // Page
-                        .Select(x => x.Name.ToString())                            // Project
-                        .ToArray();                
-                }
-            }
             Console.WriteLine("Hello World!");
+        }
+
+        private static IMongoDatabase CreateMongoDbClient()
+        {
+            var client = new MongoClient("mongodb://root:example@localhost:27017");
+            var database = client.GetDatabase("foo");
+            return database;
         }
     }
 }

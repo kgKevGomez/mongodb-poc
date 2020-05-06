@@ -5,6 +5,8 @@
     <RootNamespace>raven_poc</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="RavenDB.Client" Version="4.2.102"/>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="2.10.3"/>
   </ItemGroup>
 </Project>

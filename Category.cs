@@ -1,25 +1,17 @@
 using System.Collections.Generic;
+using System.Linq;
 
-namespace raven_poc
+namespace mongodb_poc
 {
-    public class Name {
-        private readonly string value;
-
-        public Name(string value)
-        {
-            this.value = value;
-        }
-
-        public static implicit operator string(Name name) => name.value;
-        public static explicit operator Name(string name) => new Name(name);
-
-        public override string ToString() => value;
-    }
-    internal class Category
+    public class Category
     {
         public string Id { get; private set; }
         public Name Name { get; private set; }
-        public IReadOnlyCollection<string> Tags => _tags;
+        public IReadOnlyCollection<string> Tags 
+        { 
+            get => _tags; 
+            private set { _tags = value.ToList(); } //mongodb needs a private setter to link the property to the backing field
+        }
         protected Category()
         {
             
@@ -33,6 +25,6 @@ namespace raven_poc
         public void ChangeName(Name name) => Name = name;
         public void AddTag(string tag) => _tags.Add(tag);
 
-        private readonly List<string> _tags = new List<string>();
+        private List<string> _tags = new List<string>();
     }
 }
